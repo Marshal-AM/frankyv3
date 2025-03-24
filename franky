@@ -1,168 +1,232 @@
 #!/bin/bash
 
+# Franky - A simple installer and runner for ZerePy
+# Usage: franky [command]
+#   - install: Install the ZerePy dependencies
+#   - serve: Run the ZerePy server
+
 # Configuration
 REPO_URL="https://github.com/blorm-network/ZerePy.git"
 REPO_DIR="ZerePy"
-VENV_DIR="venv"
 PORT=8000
+HOST="0.0.0.0"
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+# Function to print with color
+print_color() {
+  local color="$1"
+  local message="$2"
+  
+  case "$color" in
+    "red") echo -e "\033[31m$message\033[0m" ;;
+    "green") echo -e "\033[32m$message\033[0m" ;;
+    "yellow") echo -e "\033[33m$message\033[0m" ;;
+    "blue") echo -e "\033[34m$message\033[0m" ;;
+    *) echo "$message" ;;
+  esac
 }
 
-# Function to check dependencies
+# Check dependencies
 check_dependencies() {
-    echo "Checking dependencies..."
-    
-    # Check if Python is installed
-    if ! command_exists python3; then
-        echo "Error: Python 3 is not installed. Please install Python 3 and try again."
-        exit 1
+  print_color "blue" "Checking dependencies..."
+  
+  # Check if Python is installed
+  if ! command -v python3 >/dev/null 2>&1; then
+    print_color "red" "Python 3 not found. Please install Python 3 first."
+    exit 1
+  else
+    PYTHON_VERSION=$(python3 --version)
+    print_color "green" "Found $PYTHON_VERSION"
+  fi
+  
+  # Check if pip is installed
+  if ! command -v pip3 >/dev/null 2>&1; then
+    print_color "red" "Pip not found. Please install pip first."
+    exit 1
+  else
+    PIP_VERSION=$(pip3 --version)
+    print_color "green" "Found $PIP_VERSION"
+  fi
+  
+  # Check if Git is installed
+  if ! command -v git >/dev/null 2>&1; then
+    print_color "red" "Git not found. Please install Git first."
+    exit 1
+  else
+    GIT_VERSION=$(git --version)
+    print_color "green" "Found $GIT_VERSION"
+  fi
+  
+  # Check if ngrok is installed (for serve command)
+  if [ "$1" == "serve" ] && ! command -v ngrok >/dev/null 2>&1; then
+    print_color "yellow" "Warning: ngrok not found. Port forwarding will not be available."
+  else
+    if [ "$1" == "serve" ]; then
+      NGROK_VERSION=$(ngrok --version)
+      print_color "green" "Found ngrok: $NGROK_VERSION"
     fi
-    
-    # Check if git is installed
-    if ! command_exists git; then
-        echo "Error: Git is not installed. Please install Git and try again."
-        exit 1
-    fi
-    
-    # Check if ngrok is installed (for serve command)
-    if [ "$1" == "serve" ] && ! command_exists ngrok; then
-        echo "Error: ngrok is not installed. Please install ngrok and try again."
-        exit 1
-    fi
+  fi
 }
 
-# Install command
-install() {
-    check_dependencies "install"
-    
-    echo "Installing ZerePy..."
-    
-    # Clone the repository if it doesn't exist
-    if [ ! -d "$REPO_DIR" ]; then
-        echo "Cloning repository from $REPO_URL..."
-        git clone "$REPO_URL"
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to clone repository."
-            exit 1
-        fi
-    else
-        echo "Repository already exists. Updating..."
-        cd "$REPO_DIR"
-        git pull
-        cd ..
+# Install ZerePy
+install_zeropy() {
+  check_dependencies "install"
+  
+  print_color "blue" "Installing ZerePy..."
+  
+  # Clone the repository if it doesn't exist
+  if [ ! -d "$REPO_DIR" ]; then
+    print_color "yellow" "Cloning repository from $REPO_URL..."
+    git clone "$REPO_URL"
+    if [ $? -ne 0 ]; then
+      print_color "red" "Error: Failed to clone repository."
+      exit 1
     fi
-    
-    # Change to repository directory
+  else
+    print_color "yellow" "Repository already exists. Updating..."
     cd "$REPO_DIR"
-    
-    # Create virtual environment if it doesn't exist
-    if [ ! -d "$VENV_DIR" ]; then
-        echo "Creating virtual environment..."
-        python3 -m venv "$VENV_DIR"
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to create virtual environment."
-            exit 1
-        fi
-    else
-        echo "Virtual environment already exists."
+    git pull
+    cd ..
+  fi
+  
+  # Change to repository directory
+  cd "$REPO_DIR"
+  
+  # Create virtual environment if it doesn't exist
+  if [ ! -d "venv" ]; then
+    print_color "yellow" "Creating virtual environment..."
+    python3 -m venv venv
+    if [ $? -ne 0 ]; then
+      print_color "red" "Error: Failed to create virtual environment."
+      exit 1
     fi
-    
-    # Activate virtual environment and install dependencies
-    echo "Installing dependencies..."
-    source "$VENV_DIR/bin/activate"
-    pip install --upgrade pip
-    if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt
+  else
+    print_color "yellow" "Virtual environment already exists."
+  fi
+  
+  # Activate virtual environment and install dependencies
+  print_color "yellow" "Installing dependencies..."
+  source venv/bin/activate
+  pip install --upgrade pip
+  
+  if [ -f "requirements.txt" ]; then
+    print_color "blue" "Installing from requirements.txt..."
+    pip install -r requirements.txt
+  else
+    # Try poetry if available
+    if command -v poetry >/dev/null 2>&1; then
+      print_color "blue" "Installing with Poetry..."
+      poetry install --no-root
     else
-        echo "Warning: requirements.txt not found. Using poetry install instead..."
-        if command_exists poetry; then
-            poetry install --no-root
-        else
-            echo "Error: Poetry is not installed and requirements.txt not found."
-            echo "Please install Poetry or create a requirements.txt file."
-            exit 1
-        fi
+      print_color "yellow" "No requirements.txt found. Installing using pip..."
+      pip install uvicorn fastapi
     fi
-    
-    # Deactivate virtual environment
-    deactivate
-    
-    echo "Installation complete! You can now run './franky.sh serve' to start the server."
-    
-    # Create activation instructions
-    echo ""
-    echo "To manually activate the virtual environment, run:"
-    echo "  cd $REPO_DIR && source $VENV_DIR/bin/activate"
+  fi
+  
+  deactivate
+  cd ..
+  
+  print_color "green" "✅ ZerePy installed successfully!"
+  print_color "green" "Run 'franky serve' to start the server."
 }
 
-# Serve command
-serve() {
-    check_dependencies "serve"
-    
-    # Check if repository directory exists
-    if [ ! -d "$REPO_DIR" ]; then
-        echo "Error: ZerePy directory not found. Please run './franky.sh install' first."
-        exit 1
-    fi
-    
-    # Change to repository directory
-    cd "$REPO_DIR"
-    
-    # Check if virtual environment exists
-    if [ ! -d "$VENV_DIR" ]; then
-        echo "Error: Virtual environment not found. Please run './franky.sh install' first."
-        exit 1
-    fi
-    
-    # Activate virtual environment and start server
-    echo "Starting server on port $PORT..."
-    source "$VENV_DIR/bin/activate"
-    
-    # Start the server in the background
-    python main.py --server --port $PORT &
-    SERVER_PID=$!
-    
-    # Give the server a moment to start
-    sleep 2
-    
-    # Check if server started successfully
-    if ! ps -p $SERVER_PID > /dev/null; then
-        echo "Error: Server failed to start."
-        exit 1
-    fi
-    
-    echo "Server running with PID: $SERVER_PID"
-    echo "Starting ngrok for port forwarding..."
-    
-    # Set up port forwarding with ngrok
+# Run the ZerePy server
+serve_zeropy() {
+  check_dependencies "serve"
+  
+  if [ ! -d "$REPO_DIR" ]; then
+    print_color "red" "ZerePy not installed. Run 'franky install' first."
+    exit 1
+  fi
+  
+  cd "$REPO_DIR"
+  
+  if [ ! -d "venv" ]; then
+    print_color "red" "Virtual environment not found. Run 'franky install' first."
+    exit 1
+  fi
+  
+  # Activate virtual environment and start server
+  print_color "blue" "Starting server on $HOST:$PORT..."
+  source venv/bin/activate
+  
+  # Start the server in the background
+  python main.py --server --host $HOST --port $PORT &
+  SERVER_PID=$!
+  
+  # Give the server a moment to start
+  sleep 2
+  
+  # Check if server started successfully
+  if ! ps -p $SERVER_PID > /dev/null; then
+    print_color "red" "Error: Server failed to start."
+    exit 1
+  fi
+  
+  print_color "green" "Server running with PID: $SERVER_PID"
+  
+  # Set up port forwarding with ngrok if available
+  if command -v ngrok >/dev/null 2>&1; then
+    print_color "blue" "Starting ngrok for port forwarding..."
     ngrok http $PORT
     
     # When ngrok is closed, kill the server
     kill $SERVER_PID 2>/dev/null
-    echo "Server stopped."
+    print_color "yellow" "Server stopped."
+  else
+    print_color "yellow" "ngrok not found. Server is running at http://$HOST:$PORT"
+    print_color "yellow" "Press Ctrl+C to stop the server."
+    
+    # Wait for Ctrl+C
+    wait $SERVER_PID
+  fi
+  
+  deactivate
+}
+
+# Create the alias function that makes "franky" work from anywhere
+create_alias() {
+  # Get the full path to this script
+  SCRIPT_PATH=$(readlink -f "$0")
+  SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+  
+  # Create a temporary alias script
+  cat > "$SCRIPT_DIR/franky" << EOF
+#!/bin/bash
+$SCRIPT_PATH "\$@"
+EOF
+  
+  chmod +x "$SCRIPT_DIR/franky"
+  
+  # Add the script directory to PATH temporarily
+  export PATH="$SCRIPT_DIR:$PATH"
+  
+  print_color "green" "You can now use 'franky' command directly."
 }
 
 # Main function
-main() {
-    case "$1" in
-        "install")
-            install
-            ;;
-        "serve")
-            serve
-            ;;
-        *)
-            echo "Usage: ./franky.sh [command]"
-            echo "Commands:"
-            echo "  install    Clone repository, create virtual environment, and install dependencies"
-            echo "  serve      Start the server and set up port forwarding with ngrok"
-            exit 1
-            ;;
-    esac
-}
+if [ -z "$1" ]; then
+  print_color "yellow" "Usage: franky [command]"
+  print_color "yellow" "Commands:"
+  print_color "yellow" "  install    Install ZerePy"
+  print_color "yellow" "  serve      Start the ZerePy server"
+  exit 1
+fi
 
-# Run main function with all arguments
-main "$@"
+case "$1" in
+  "install")
+    install_zeropy
+    ;;
+  "serve")
+    serve_zeropy
+    ;;
+  *)
+    print_color "red" "Unknown command: $1"
+    print_color "yellow" "Available commands: install, serve"
+    exit 1
+    ;;
+esac
+
+# Create alias if this script is executed directly
+if [[ "$(basename "$0")" != "franky" ]]; then
+  create_alias
+fi
