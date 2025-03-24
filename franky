@@ -113,7 +113,12 @@ install_zeropy() {
   
   if [ -f "requirements.txt" ]; then
     print_color "blue" "Installing from requirements.txt..."
-    pip install python-dotenv prompt-toolkit aiohttp requests fastapi uvicorn
+    pip install python-dotenv 
+    pip install prompt-toolkit 
+    pip install aiohttp 
+    pip install requests 
+    pip install fastapi 
+    pip install uvicorn
   else
     # Try poetry if available
     if command -v poetry >/dev/null 2>&1; then
