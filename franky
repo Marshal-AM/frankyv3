@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-REPO_URL="https://github.com/Marshal-AM/frankyv3.git"
+REPO_URL="https://github.com/blorm-network/ZerePy.git"
 REPO_DIR="ZerePy"
 VENV_DIR="venv"
 PORT=8000
@@ -90,7 +90,7 @@ install() {
     # Deactivate virtual environment
     deactivate
     
-    echo "Installation complete! You can now run 'franky serve' to start the server."
+    echo "Installation complete! You can now run './franky.sh serve' to start the server."
     
     # Create activation instructions
     echo ""
@@ -104,7 +104,7 @@ serve() {
     
     # Check if repository directory exists
     if [ ! -d "$REPO_DIR" ]; then
-        echo "Error: ZerePy directory not found. Please run 'franky install' first."
+        echo "Error: ZerePy directory not found. Please run './franky.sh install' first."
         exit 1
     fi
     
@@ -113,7 +113,7 @@ serve() {
     
     # Check if virtual environment exists
     if [ ! -d "$VENV_DIR" ]; then
-        echo "Error: Virtual environment not found. Please run 'franky install' first."
+        echo "Error: Virtual environment not found. Please run './franky.sh install' first."
         exit 1
     fi
     
@@ -155,7 +155,7 @@ main() {
             serve
             ;;
         *)
-            echo "Usage: franky [command]"
+            echo "Usage: ./franky.sh [command]"
             echo "Commands:"
             echo "  install    Clone repository, create virtual environment, and install dependencies"
             echo "  serve      Start the server and set up port forwarding with ngrok"
