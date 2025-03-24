@@ -1,31 +1,23 @@
 import logging
-from typing import Any, List, Optional, Type, Dict
-from src.connections.base_connection import BaseConnection
-from src.connections.anthropic_connection import AnthropicConnection
-from src.connections.eternalai_connection import EternalAIConnection
-from src.connections.goat_connection import GoatConnection
-from src.connections.groq_connection import GroqConnection
-from src.connections.openai_connection import OpenAIConnection
-from src.connections.twitter_connection import TwitterConnection
-from src.connections.farcaster_connection import FarcasterConnection
+from typing import Any, List, Optional, Dict
 from src.connections.ollama_connection import OllamaConnection
-from src.connections.echochambers_connection import EchochambersConnection
-from src.connections.solana_connection import SolanaConnection
-from src.connections.hyperbolic_connection import HyperbolicConnection
-from src.connections.galadriel_connection import GaladrielConnection
-from src.connections.sonic_connection import SonicConnection
-from src.connections.discord_connection import DiscordConnection
-from src.connections.allora_connection import AlloraConnection
-from src.connections.xai_connection import XAIConnection
-from src.connections.ethereum_connection import EthereumConnection
-from src.connections.together_connection import TogetherAIConnection
-from src.connections.evm_connection import EVMConnection
-from src.connections.perplexity_connection import PerplexityConnection
-from src.connections.monad_connection import MonadConnection
 from src.connections.api_tools_connection import APIToolsConnection
 
 logger = logging.getLogger("connection_manager")
 
+class BaseConnection:
+    def __init__(self, config):
+        self.config = config
+        self.actions = {}
+
+    def is_configured(self, verbose=False):
+        raise NotImplementedError("Subclasses must implement is_configured")
+
+    def configure(self):
+        raise NotImplementedError("Subclasses must implement configure")
+
+    def perform_action(self, action_name, kwargs):
+        raise NotImplementedError("Subclasses must implement perform_action")
 
 class ConnectionManager:
     def __init__(self, agent_config):
@@ -33,221 +25,57 @@ class ConnectionManager:
         for config in agent_config:
             self._register_connection(config)
 
-    @staticmethod
-    def _class_name_to_type(class_name: str) -> Type[BaseConnection]:
-        if class_name == "twitter":
-            return TwitterConnection
-        elif class_name == "anthropic":
-            return AnthropicConnection
-        elif class_name == "openai":
-            return OpenAIConnection
-        elif class_name == "farcaster":
-            return FarcasterConnection
-        elif class_name == "groq":
-            return GroqConnection
-        elif class_name == "eternalai":
-            return EternalAIConnection
-        elif class_name == "ollama":
-            return OllamaConnection
-        elif class_name == "echochambers":
-            return EchochambersConnection
-        elif class_name == "goat":
-            return GoatConnection
-        elif class_name == "solana":
-            return SolanaConnection
-        elif class_name == "hyperbolic":
-            return HyperbolicConnection
-        elif class_name == "galadriel":
-            return GaladrielConnection
-        elif class_name == "sonic":
-            return SonicConnection
-        elif class_name == "discord":
-            return DiscordConnection
-        elif class_name == "allora":
-            return AlloraConnection
-        elif class_name == "xai":
-            return XAIConnection
-        elif class_name == "ethereum":
-            return EthereumConnection
-        elif class_name == "together":
-            return TogetherAIConnection
-        elif class_name == "evm":
-            return EVMConnection
-        elif class_name == "perplexity":
-            return PerplexityConnection
-        elif class_name == "monad":
-            return MonadConnection
-        elif class_name == "api_tools":
-            return APIToolsConnection
-        return None
+    def _class_name_to_type(self, class_name: str):
+        connection_map = {
+            "ollama": OllamaConnection,
+            "api_tools": APIToolsConnection
+        }
+        return connection_map.get(class_name)
 
     def _register_connection(self, config_dic: Dict[str, Any]) -> None:
-        """
-        Create and register a new connection with configuration
-
-        Args:
-            name: Identifier for the connection
-            connection_class: The connection class to instantiate
-            config: Configuration dictionary for the connection
-        """
         try:
             name = config_dic["name"]
             connection_class = self._class_name_to_type(name)
-            connection = connection_class(config_dic)
-            self.connections[name] = connection
-        except Exception as e:
-            logging.error(f"Failed to initialize connection {name}: {e}")
-
-    def _check_connection(self, connection_string: str) -> bool:
-        try:
-            connection = self.connections[connection_string]
-            return connection.is_configured(verbose=True)
-        except KeyError:
-            logging.error(
-                "\nUnknown connection. Try 'list-connections' to see all supported connections."
-            )
-            return False
-        except Exception as e:
-            logging.error(f"\nAn error occurred: {e}")
-            return False
-
-    def configure_connection(self, connection_name: str) -> bool:
-        """Configure a specific connection"""
-        try:
-            connection = self.connections[connection_name]
-            success = connection.configure()
-
-            if success:
-                logging.info(
-                    f"\n✅ SUCCESSFULLY CONFIGURED CONNECTION: {connection_name}"
-                )
+            if connection_class:
+                connection = connection_class(config_dic)
+                self.connections[name] = connection
             else:
-                logging.error(f"\n❌ ERROR CONFIGURING CONNECTION: {connection_name}")
-            return success
-
-        except KeyError:
-            logging.error(
-                "\nUnknown connection. Try 'list-connections' to see all supported connections."
-            )
-            return False
+                logger.error(f"Unsupported connection type: {name}")
         except Exception as e:
-            logging.error(f"\nAn error occurred: {e}")
-            return False
+            logger.error(f"Failed to initialize connection {config_dic.get('name', 'unknown')}: {e}")
 
     def list_connections(self) -> None:
-        """List all available connections and their status"""
-        logging.info("\nAVAILABLE CONNECTIONS:")
+        logger.info("\nAVAILABLE CONNECTIONS:")
         for name, connection in self.connections.items():
-            status = (
-                "✅ Configured" if connection.is_configured() else "❌ Not Configured"
-            )
-            logging.info(f"- {name}: {status}")
+            status = "✅ Configured" if connection.is_configured() else "❌ Not Configured"
+            logger.info(f"- {name}: {status}")
 
     def list_actions(self, connection_name: str) -> None:
-        """List all available actions for a specific connection"""
         try:
             connection = self.connections[connection_name]
-
-            if connection.is_configured():
-                logging.info(
-                    f"\n✅ {connection_name} is configured. You can use any of its actions."
-                )
-            else:
-                logging.info(
-                    f"\n❌ {connection_name} is not configured. You must configure a connection to use its actions."
-                )
-
-            logging.info("\nAVAILABLE ACTIONS:")
+            logger.info(f"\nACTIONS for {connection_name}:")
             for action_name, action in connection.actions.items():
-                logging.info(f"- {action_name}: {action.description}")
-                logging.info("  Parameters:")
-                for param in action.parameters:
-                    req = "required" if param.required else "optional"
-                    logging.info(f"    - {param.name} ({req}): {param.description}")
-
+                logger.info(f"- {action_name}: {action.description}")
         except KeyError:
-            logging.error(
-                "\nUnknown connection. Try 'list-connections' to see all supported connections."
-            )
-        except Exception as e:
-            logging.error(f"\nAn error occurred: {e}")
+            logger.error(f"Unknown connection: {connection_name}")
 
     def perform_action(
         self, connection_name: str, action_name: str, params: List[Any]
     ) -> Optional[Any]:
-        """Perform an action on a specific connection with given parameters"""
         try:
-            logging.info(f"Connection manager perform_action: {connection_name}, {action_name}, params={params}")
-            
             connection = self.connections[connection_name]
-
+            
             if not connection.is_configured():
-                logging.error(
-                    f"\nError: Connection '{connection_name}' is not configured"
-                )
+                logger.error(f"Connection '{connection_name}' is not configured")
                 return None
 
-            if action_name not in connection.actions:
-                logging.error(
-                    f"\nError: Unknown action '{action_name}' for connection '{connection_name}'"
-                )
-                return None
-
-            action = connection.actions[action_name]
-            
-            # Special handling for 'chat' action for Ollama
+            # Special handling for Ollama chat action
             if connection_name == "ollama" and action_name == "chat":
-                logging.info("Special handling for Ollama chat action")
-                # If params[0] is a string, convert to proper message format
-                if len(params) > 0:
-                    if isinstance(params[0], str):
-                        logging.info(f"Converting string message '{params[0]}' to chat format")
-                        kwargs = {"messages": [{"role": "user", "content": params[0]}]}
-                        return connection.perform_action(action_name, kwargs)
-                    # If first parameter is a list, that's the messages list
-                    elif isinstance(params[0], list):
-                        logging.info(f"Using message list: {params[0]}")
-                        kwargs = {"messages": params[0]}
-                        return connection.perform_action(action_name, kwargs)
+                if params and isinstance(params[0], str):
+                    params = [{"role": "user", "content": params[0]}]
 
-            # Convert list of params to kwargs dictionary, handling both required and optional params
-            kwargs = {}
-            param_index = 0
-
-            # Add provided parameters up to the number provided
-            for i, param in enumerate(action.parameters):
-                if param_index < len(params):
-                    kwargs[param.name] = params[param_index]
-                    param_index += 1
-            
-            logging.info(f"Action parameters mapped to kwargs: {kwargs}")
-
-            # Validate all required parameters are present
-            missing_required = [
-                param.name
-                for param in action.parameters
-                if param.required and param.name not in kwargs
-            ]
-
-            if missing_required:
-                logging.error(
-                    f"\nError: Missing required parameters: {', '.join(missing_required)}"
-                )
-                return None
-
-            return connection.perform_action(action_name, kwargs)
+            return connection.perform_action(action_name, params)
 
         except Exception as e:
-            logging.error(
-                f"\nAn error occurred while trying action {action_name} for {connection_name} connection: {e}",
-                exc_info=True
-            )
+            logger.error(f"Error in perform_action for {connection_name}: {e}")
             return None
-
-    def get_model_providers(self) -> List[str]:
-        """Get a list of all LLM provider connections"""
-        return [
-            name
-            for name, conn in self.connections.items()
-            if conn.is_configured() and getattr(conn, "is_llm_provider", lambda: False)
-        ]
