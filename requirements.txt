@@ -1,6 +1,5 @@
 python-dotenv
 prompt-toolkit
-web3
 aiohttp
 requests
 fastapi
