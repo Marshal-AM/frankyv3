@@ -1,0 +1,262 @@
+{
+	"info": {
+		"_postman_id": "5e23c7e4-6a8e-4b5e-9d7c-ea3d82a25c2c",
+		"name": "ZerePy Agent API",
+		"description": "Collection for interacting with the ZerePy Agent API, particularly for Ollama chat and API tools functionality.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Server Status",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						""
+					]
+				},
+				"description": "Check the server status and which agent is loaded"
+			},
+			"response": []
+		},
+		{
+			"name": "List Available Agents",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/agents",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"agents"
+					]
+				},
+				"description": "Get a list of all available agents"
+			},
+			"response": []
+		},
+		{
+			"name": "Load Agent",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/agents/example/load",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"agents",
+						"example",
+						"load"
+					]
+				},
+				"description": "Load a specific agent by name"
+			},
+			"response": []
+		},
+		{
+			"name": "List Connections",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/connections",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"connections"
+					]
+				},
+				"description": "List all available connections for the loaded agent"
+			},
+			"response": []
+		},
+		{
+			"name": "Configure Ollama Connection",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"connection\": \"ollama\",\n    \"params\": {\n        \"base_url\": \"http://localhost:11434\",\n        \"model\": \"llama3:latest\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/connections/ollama/configure",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"connections",
+						"ollama",
+						"configure"
+					]
+				},
+				"description": "Configure the Ollama connection"
+			},
+			"response": []
+		},
+		{
+			"name": "API Tools Diagnostics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/api-tools/diagnostics",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api-tools",
+						"diagnostics"
+					]
+				},
+				"description": "Check the status of the API Tools configuration, particularly the 1inch API key"
+			},
+			"response": []
+		},
+		{
+			"name": "Update 1inch API Key",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/api-tools/update-api-key?api_key=your_new_api_key_here",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api-tools",
+						"update-api-key"
+					],
+					"query": [
+						{
+							"key": "api_key",
+							"value": "your_new_api_key_here"
+						}
+					]
+				},
+				"description": "Update the 1inch API key used for gas price queries and other API tools functionality"
+			},
+			"response": []
+		},
+		{
+			"name": "Ollama Chat",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"connection\": \"ollama\",\n    \"action\": \"chat\",\n    \"params\": [\"What are the current gas prices on Ethereum?\"]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/ollama/chat",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"ollama",
+						"chat"
+					]
+				},
+				"description": "Chat with the Ollama model using the agent's personality"
+			},
+			"response": []
+		},
+		{
+			"name": "Ollama Chat Stream",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"connection\": \"ollama\",\n    \"action\": \"chat\",\n    \"params\": [\"What are the current gas prices on Avalanche?\"]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/ollama/chat/stream",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"ollama",
+						"chat",
+						"stream"
+					]
+				},
+				"description": "Chat with the Ollama model with streaming response that mimics CLI behavior"
+			},
+			"response": []
+		},
+		{
+			"name": "Execute Generic Agent Action",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"connection\": \"api_tools\",\n    \"action\": \"get-gas-price\",\n    \"params\": [\"1\"]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/agent/action",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"agent",
+						"action"
+					]
+				},
+				"description": "Execute a generic agent action directly (example is getting Ethereum gas prices)"
+			},
+			"response": []
+		}
+	]
+} 
