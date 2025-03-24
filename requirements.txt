@@ -1,7 +1,7 @@
-python-dotenv==1.0.1
-prompt-toolkit==3.0.48
+python-dotenv
+prompt-toolkit
 web3
-aiohttp==3.11.11
-requests==2.32.3
-fastapi==0.109.0
-uvicorn==0.27.0 
+aiohttp
+requests
+fastapi
+uvicorn
