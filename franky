@@ -6,7 +6,7 @@
 #   - serve: Run the ZerePy server
 
 # Configuration
-REPO_URL="https://github.com/Marshal-AM/frankyv3.git"
+REPO_URL="https://github.com/blorm-network/ZerePy.git"
 REPO_DIR="ZerePy"
 PORT=8000
 HOST="0.0.0.0"
@@ -61,7 +61,7 @@ check_dependencies() {
     print_color "yellow" "Warning: ngrok not found. Port forwarding will not be available."
   else
     if [ "$1" == "serve" ]; then
-      NGROK_VERSION=$(ngrok --version)
+      NGROK_VERSION=$(ngrok --version 2>/dev/null || echo "Unknown version")
       print_color "green" "Found ngrok: $NGROK_VERSION"
     fi
   fi
@@ -85,11 +85,14 @@ install_zeropy() {
     print_color "yellow" "Repository already exists. Updating..."
     cd "$REPO_DIR"
     git pull
-    cd ..
+    # Stay in the repository directory
   fi
   
-  # Change to repository directory
-  cd "$REPO_DIR"
+  # Make sure we're in the repository directory
+  if [ "$(basename $(pwd))" != "$REPO_DIR" ]; then
+    print_color "blue" "Entering repository directory: $REPO_DIR"
+    cd "$REPO_DIR"
+  fi
   
   # Create virtual environment if it doesn't exist
   if [ ! -d "venv" ]; then
@@ -122,10 +125,10 @@ install_zeropy() {
     fi
   fi
   
+  # Deactivate virtual environment but stay in the directory
   deactivate
-  cd ..
   
-  print_color "green" "✅ ZerePy installed successfully!"
+  print_color "green" "✅ ZerePy installed successfully in: $(pwd)"
   print_color "green" "Run 'franky serve' to start the server."
 }
 
@@ -133,12 +136,17 @@ install_zeropy() {
 serve_zeropy() {
   check_dependencies "serve"
   
+  # Go to the repository directory if not already there
   if [ ! -d "$REPO_DIR" ]; then
     print_color "red" "ZerePy not installed. Run 'franky install' first."
     exit 1
   fi
   
-  cd "$REPO_DIR"
+  # Make sure we're in the repository directory
+  if [ "$(basename $(pwd))" != "$REPO_DIR" ]; then
+    print_color "blue" "Entering repository directory: $REPO_DIR"
+    cd "$REPO_DIR"
+  fi
   
   if [ ! -d "venv" ]; then
     print_color "red" "Virtual environment not found. Run 'franky install' first."
@@ -149,23 +157,26 @@ serve_zeropy() {
   print_color "blue" "Starting server on $HOST:$PORT..."
   source venv/bin/activate
   
-  # Start the server in the background
-  python main.py --server --host $HOST --port $PORT &
-  SERVER_PID=$!
+  # Start the server directly (not in background)
+  print_color "blue" "Running: python main.py --server --host $HOST --port $PORT"
   
-  # Give the server a moment to start
-  sleep 2
-  
-  # Check if server started successfully
-  if ! ps -p $SERVER_PID > /dev/null; then
-    print_color "red" "Error: Server failed to start."
-    exit 1
-  fi
-  
-  print_color "green" "Server running with PID: $SERVER_PID"
-  
-  # Set up port forwarding with ngrok if available
+  # Check if ngrok is available
   if command -v ngrok >/dev/null 2>&1; then
+    # Start server in background if using ngrok
+    python main.py --server --host $HOST --port $PORT &
+    SERVER_PID=$!
+    
+    # Give the server a moment to start
+    sleep 2
+    
+    # Check if server started successfully
+    if ! ps -p $SERVER_PID > /dev/null; then
+      print_color "red" "Error: Server failed to start."
+      deactivate
+      exit 1
+    fi
+    
+    print_color "green" "Server running with PID: $SERVER_PID"
     print_color "blue" "Starting ngrok for port forwarding..."
     ngrok http $PORT
     
@@ -173,20 +184,19 @@ serve_zeropy() {
     kill $SERVER_PID 2>/dev/null
     print_color "yellow" "Server stopped."
   else
-    print_color "yellow" "ngrok not found. Server is running at http://$HOST:$PORT"
-    print_color "yellow" "Press Ctrl+C to stop the server."
-    
-    # Wait for Ctrl+C
-    wait $SERVER_PID
+    # Run server directly if no ngrok
+    print_color "yellow" "Server will be available at http://$HOST:$PORT"
+    python main.py --server --host $HOST --port $PORT
   fi
   
+  # Deactivate virtual environment
   deactivate
 }
 
 # Create the alias function that makes "franky" work from anywhere
 create_alias() {
   # Get the full path to this script
-  SCRIPT_PATH=$(readlink -f "$0")
+  SCRIPT_PATH=$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")
   SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
   
   # Create a temporary alias script
