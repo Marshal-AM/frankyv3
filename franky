@@ -6,7 +6,7 @@
 #   - serve: Run the ZerePy server
 
 # Configuration
-REPO_URL="https://github.com/blorm-network/ZerePy.git"
+REPO_URL="https://github.com/Marshal-AM/frankyv3.git"
 REPO_DIR="ZerePy"
 PORT=8000
 HOST="0.0.0.0"
